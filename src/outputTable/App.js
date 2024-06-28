@@ -1,0 +1,219 @@
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { AgGridReact } from "@ag-grid-community/react";
+import "@ag-grid-community/styles/ag-grid.css";
+import "@ag-grid-community/styles/ag-theme-quartz.css";
+import { ModuleRegistry } from "@ag-grid-community/core";
+import { ClientSideRowModelModule } from "@ag-grid-community/client-side-row-model";
+import axios from 'axios';
+import RemarksEditor from "./RemarksEditor";
+import { ColumnsToolPanelModule } from "@ag-grid-enterprise/column-tool-panel";
+import { CsvExportModule } from "@ag-grid-community/csv-export";
+import { FiltersToolPanelModule } from "@ag-grid-enterprise/filter-tool-panel";
+import { MenuModule } from "@ag-grid-enterprise/menu";
+import { RowGroupingModule } from "@ag-grid-enterprise/row-grouping";
+import { SetFilterModule } from "@ag-grid-enterprise/set-filter";
+
+ModuleRegistry.registerModules([
+  ClientSideRowModelModule,
+  ColumnsToolPanelModule,
+  CsvExportModule,
+  FiltersToolPanelModule,
+  MenuModule,
+  RowGroupingModule,
+  SetFilterModule,
+]);
+
+const App = () => {
+  const gridRef = useRef(null);
+  const containerStyle = useMemo(() => ({ width: "100%", height: "100vh" }), []);
+  const gridStyle = useMemo(() => ({ height: "100%", width: "100%" }), []);
+  const [data, setData] = useState([]);
+  const [data2B, setData2B] = useState([]);
+
+  const [columnDefs] = useState([
+    {
+      headerName: "Booking data",
+      
+      // enableRowGroup: true,
+      children: [
+        { columnGroupShow: "closed", headerName: "Supplier", field: "booking_supplier_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true,enableRowGroup: true},
+        { columnGroupShow: "open", headerName: "Invoice_number", field: "booking_invoice_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, enableRowGroup: true, Pivot:true },
+        { columnGroupShow: "open", headerName: "Invoice_date", field: "booking_invoice_date", rowDrag: true, filter: "agDateColumnFilter", enableValue: true },
+        { columnGroupShow: "open", headerName: "Supplier_GST", field: "booking_supplier_gst", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
+        { columnGroupShow: "open", headerName: "Customer_GST", field: "booking_customer_gst", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
+        { columnGroupShow: "open", headerName: "Invoice_amount", field: "booking_invoice_amount", rowDrag: true, filter: "agNumberColumnFilter", aggFunc: "sum" },
+      ],
+    },
+    {
+      headerName: "Invoice data",
+      children: [
+       { columnGroupShow: "closed", field: "invoice_seller_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "invoice_invoice_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "invoice_invoice_date", rowDrag: true, filter: "agDateColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "invoice_buyer_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "invoice_invoice_amount", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, Pivot: true },
+      ],
+    },
+    {
+      headerName: "2B data",
+      children: [
+        { columnGroupShow: "closed", field: "twoB_seller_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "twoB_invoice_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "twoB_invoice_date", rowDrag: true, filter: "agDateColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "twoB_seller_vat_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "twoB_buyer_vat_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
+        { columnGroupShow: "open", field: "twoB_invoice_amount", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, Pivot: true },
+      ],
+    },
+    {
+      headerName: "Score",
+      children: [
+        { columnGroupShow: "closed", headerName: "Invoice number score", field: "selected_invoice_number_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true },
+        { columnGroupShow: "open", headerName: "Invoice date score", field: "selected_invoice_date_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true },
+        { columnGroupShow: "open", headerName: "Invoice amount score", field: "selected_invoice_amount_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true },
+        { columnGroupShow: "open", headerName: "GST score", field: "selected_gst_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, Pivot: true },
+      ],
+    },
+    {
+      headerName: "Confidence",
+      children: [
+        { columnGroupShow: "closed", field: "Machine", rowDrag: true },
+        { columnGroupShow: "closed", field: "Human", rowDrag: true },
+      ],
+    },
+    {
+      headerName: "Remarks",
+      field: "remarks",
+      editable: true,
+      rowDrag: true,
+      cellRendererFramework: RemarksEditor,
+      filter: "agTextColumnFilter"
+    },
+  ]);
+  const rowGroupPanelShow = 'always';
+const defaultColDef = useMemo(() => {
+    return {
+      flex: 1,
+      minWidth: 150,
+      filter: true,
+    };
+  }, []);
+
+  const autoGroupColumnDef = useMemo(() => {
+    return {
+      minWidth: 250,
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchBookingData = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/matches');
+        
+        setData(response.data);
+      } catch (error) {
+        console.error('Error fetching booking data:', error);
+      }
+    };
+    fetchBookingData();
+  }, []);
+  console.log(data, 'booking data')
+
+
+  useEffect(() => {
+    const fetch2BData = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/2bData');
+        
+        setData2B(response.data);
+      } catch (error) {
+        console.error('Error fetching 2B data:', error);
+      }
+    };
+    fetch2BData();
+    
+  }, []);
+  console.log(data2B, '2b data')
+
+
+  const rowData = useMemo(() => {
+    if (data.length === 0 || data2B.length === 0 ) {
+      return [];
+    }
+
+    const mergedData = data.map(entry => {
+      const corresponding2B = data2B.find(
+        item => item?.inum === entry?.invoice_data?.invoice_number
+      );
+      const selectedScores = entry.selected?.[0] || {};
+
+      return {
+        _id:entry._id,
+        remarks:entry.remarks,
+        booking_supplier_name: entry.booking_data?.seller_name,
+        booking_invoice_number: entry.booking_data?.invoice_number,
+        booking_invoice_date: entry.booking_data?.invoice_date,
+        booking_supplier_gst: entry.booking_data?.seller_vat_number,
+        booking_customer_gst: entry.booking_data?.buyer_vat_number,
+        booking_invoice_amount: entry.booking_data?.invoice_amount,
+
+        invoice_seller_name: entry.invoice_data?.seller_name,
+        invoice_invoice_number: entry.invoice_data?.invoice_number,
+        invoice_invoice_date: entry.invoice_data?.invoice_date,
+        invoice_buyer_name: entry.invoice_data?.buyer_name,
+        invoice_invoice_amount: entry.invoice_data?.invoice_amount,
+
+        twoB_seller_name: corresponding2B?.trdnm,
+        twoB_invoice_number: corresponding2B?.inum,
+        twoB_invoice_date: corresponding2B?.dt,
+        twoB_seller_vat_number: corresponding2B?.gstin,
+        twoB_buyer_vat_number: corresponding2B?.cstin,
+        twoB_invoice_amount: corresponding2B?.val,
+
+        selected_invoice_number_score: selectedScores?.inv_no_score,
+        selected_invoice_date_score: selectedScores?.date_score,
+        selected_invoice_amount_score: selectedScores?.amount_score,
+        selected_gst_score: selectedScores?.gstin_score,
+      };
+      
+    });
+    
+
+    return mergedData;
+  }, [data, data2B]);
+  const onCellValueChanged = async (params) => {
+    if (params.colDef.field === 'remarks') {
+      const updatedRow = params.data;
+      console.log('Updated Remarks:', updatedRow.remarks);
+      try {
+        await axios.post(`http://localhost:5000/saveRemarks?documentId=${updatedRow._id}`, {
+          remarks: updatedRow.remarks,
+        });
+        console.log('Remarks saved successfully');
+      } catch (error) {
+        console.error('Error saving remarks:', error);
+      }
+    }
+  };
+  console.log(rowData, 'rowData')
+
+  return (
+    <div style={containerStyle}>
+      <div style={gridStyle} className="ag-theme-quartz">
+        <AgGridReact
+          ref={gridRef}
+          rowData={rowData}
+          columnDefs={columnDefs}
+          defaultColDef={defaultColDef}
+          autoGroupColumnDef={autoGroupColumnDef}
+          sideBar={true}
+          rowGroupPanelShow={rowGroupPanelShow}
+          onCellValueChanged={onCellValueChanged}
+          
+        />
+      </div>
+    </div>
+  );
+};
+
+export default App;
