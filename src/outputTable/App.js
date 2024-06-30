@@ -47,7 +47,7 @@ const App = () => {
     {
       headerName: "Invoice data",
       children: [
-       { columnGroupShow: "closed", field: "invoice_seller_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true},
+      //  { columnGroupShow: "closed", field: "invoice_seller_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true},
         { columnGroupShow: "open", field: "invoice_invoice_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
         { columnGroupShow: "open", field: "invoice_invoice_date", rowDrag: true, filter: "agDateColumnFilter", enableValue: true},
         { columnGroupShow: "open", field: "invoice_buyer_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true},
@@ -109,6 +109,7 @@ const defaultColDef = useMemo(() => {
     const fetchBookingData = async () => {
       try {
         const response = await axios.get('http://localhost:5000/matches');
+        // const jsonData=JSON.parse(response.data)
         
         setData(response.data);
       } catch (error) {
@@ -117,7 +118,9 @@ const defaultColDef = useMemo(() => {
     };
     fetchBookingData();
   }, []);
+  console.log(typeof data);
   console.log(data, 'booking data')
+
 
 
   useEffect(() => {
@@ -138,6 +141,7 @@ const defaultColDef = useMemo(() => {
 
   const rowData = useMemo(() => {
     if (data.length === 0 || data2B.length === 0 ) {
+      // if (data.length === 0) {
       return [];
     }
 
@@ -157,7 +161,7 @@ const defaultColDef = useMemo(() => {
         booking_customer_gst: entry.booking_data?.buyer_vat_number,
         booking_invoice_amount: entry.booking_data?.invoice_amount,
 
-        invoice_seller_name: entry.invoice_data?.seller_name,
+        // invoice_seller_name: entry.invoice_data?.seller_name,
         invoice_invoice_number: entry.invoice_data?.invoice_number,
         invoice_invoice_date: entry.invoice_data?.invoice_date,
         invoice_buyer_name: entry.invoice_data?.buyer_name,
@@ -181,6 +185,7 @@ const defaultColDef = useMemo(() => {
 
     return mergedData;
   }, [data, data2B]);
+// }, [data]);
   const onCellValueChanged = async (params) => {
     if (params.colDef.field === 'remarks') {
       const updatedRow = params.data;

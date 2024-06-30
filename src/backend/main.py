@@ -3,24 +3,29 @@ from pymongo.errors import ConnectionFailure
 from bson import ObjectId
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-# from config import MONGODB_CONNECTION_STRING, DATABASE_FUZZY, COLLECTION_FUZZY_OUTPUT, COLLECTION_GST_INPUT_2B, DATABASE_GST
+from config import MONGODB_CONNECTION_STRING, DATABASE_FUZZY, COLLECTION_FUZZY_OUTPUT, COLLECTION_GST_INPUT_2B, DATABASE_GST
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-connection_string = "mongodb+srv://Monica_Valentina_M:Monica_Valentina_M@monica.p3vuhne.mongodb.net/?retryWrites=true&w=majority&appName=monica"
+connection_string = MONGODB_CONNECTION_STRING
 client = MongoClient(connection_string)
-db_name = 'hotel_recon'
-matches_collection_name = 'sap_june_2024'
+db_name = DATABASE_FUZZY
+matches_collection_name = COLLECTION_FUZZY_OUTPUT
 selected_column_collection_name = "selectedColumn"
 
-# twoB_database_name = DATABASE_GST
-twoB_collection_name = '2b2'
+twoB_database_name = DATABASE_GST
+twoB_collection_name = COLLECTION_GST_INPUT_2B
 
 def default(obj):
     if isinstance(obj, ObjectId):
         return str(obj)
+    elif isinstance(obj, float) and (obj != obj or obj == float('inf') or obj == float('-inf')):
+        return None
+    elif isinstance(obj, datetime):
+        return obj.isoformat()  # Serialize datetime to ISO 8601 format
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 def convert_object_ids(data):
@@ -30,8 +35,21 @@ def convert_object_ids(data):
         return {key: convert_object_ids(value) for key, value in data.items()}
     elif isinstance(data, ObjectId):
         return str(data)
-    else:
+    elif isinstance(data, float) and (data != data or data == float('inf') or data == float('-inf')):
+        return None  # Convert NaN and Infinity to None
+    elif isinstance(data, (int, str)):
         return data
+    elif isinstance(data, datetime):
+        return data.isoformat()  # Convert datetime to ISO 8601 format
+    elif data is None:
+        return None
+    else:
+        try:
+            json.dumps(data, default=default)  # Try to serialize using json.dumps with custom default function
+            return data
+        except Exception as e:
+            print(f"Failed to serialize: {data}, Error: {e}")
+            return str(data)  # Return as string if serialization fails
 
 @app.route('/matches', methods=['GET'])
 def fetch_new_data():
@@ -53,7 +71,7 @@ def fetch_new_data():
 @app.route('/2bData', methods=['GET'])
 def fetch_2b_data():
     try:
-        db = client[db_name]
+        db = client[twoB_database_name]
         new_collection = db[twoB_collection_name]
         print("MongoDB connection for two b: Successful")
         new_data = list(new_collection.find().limit(20))
