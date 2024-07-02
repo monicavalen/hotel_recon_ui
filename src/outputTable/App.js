@@ -37,7 +37,7 @@ const App = () => {
       // enableRowGroup: true,
       children: [
         { columnGroupShow: "closed", headerName: "Supplier", field: "booking_supplier_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true,enableRowGroup: true},
-        { columnGroupShow: "open", headerName: "Invoice_number", field: "booking_invoice_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, enableRowGroup: true, Pivot:true },
+        { columnGroupShow: "open", headerName: "Invoice_number", field: "booking_invoice_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, enableRowGroup: true},
         { columnGroupShow: "open", headerName: "Invoice_date", field: "booking_invoice_date", rowDrag: true, filter: "agDateColumnFilter", enableValue: true },
         { columnGroupShow: "open", headerName: "Supplier_GST", field: "booking_supplier_gst", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
         { columnGroupShow: "open", headerName: "Customer_GST", field: "booking_customer_gst", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
@@ -51,7 +51,7 @@ const App = () => {
         { columnGroupShow: "open", field: "invoice_invoice_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
         { columnGroupShow: "open", field: "invoice_invoice_date", rowDrag: true, filter: "agDateColumnFilter", enableValue: true},
         { columnGroupShow: "open", field: "invoice_buyer_name", rowDrag: true, filter: "agTextColumnFilter", enableValue: true},
-        { columnGroupShow: "open", field: "invoice_invoice_amount", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, Pivot: true },
+        { columnGroupShow: "open", field: "invoice_invoice_amount", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
       ],
     },
     {
@@ -62,7 +62,7 @@ const App = () => {
         { columnGroupShow: "open", field: "twoB_invoice_date", rowDrag: true, filter: "agDateColumnFilter", enableValue: true},
         { columnGroupShow: "open", field: "twoB_seller_vat_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
         { columnGroupShow: "open", field: "twoB_buyer_vat_number", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
-        { columnGroupShow: "open", field: "twoB_invoice_amount", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, Pivot: true },
+        { columnGroupShow: "open", field: "twoB_invoice_amount", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true},
       ],
     },
     {
@@ -71,7 +71,7 @@ const App = () => {
         { columnGroupShow: "closed", headerName: "Invoice number score", field: "selected_invoice_number_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true },
         { columnGroupShow: "open", headerName: "Invoice date score", field: "selected_invoice_date_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true },
         { columnGroupShow: "open", headerName: "Invoice amount score", field: "selected_invoice_amount_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true },
-        { columnGroupShow: "open", headerName: "GST score", field: "selected_gst_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true, Pivot: true },
+        { columnGroupShow: "open", headerName: "GST score", field: "selected_gst_score", rowDrag: true, filter: "agNumberColumnFilter", enableValue: true },
       ],
     },
     {
@@ -208,9 +208,10 @@ const defaultColDef = useMemo(() => {
           ref={gridRef}
           rowData={rowData}
           columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          autoGroupColumnDef={autoGroupColumnDef}
-          sideBar={true}
+          // defaultColDef={defaultColDef}
+          // autoGroupColumnDef={autoGroupColumnDef}
+          // sideBar={true}
+          sideBar='filters'
           rowGroupPanelShow={rowGroupPanelShow}
           onCellValueChanged={onCellValueChanged}
           

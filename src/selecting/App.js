@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import '../selecting/Sap.css';
 import { Popconfirm } from 'antd';
 import axios from 'axios';
+import { json } from 'react-router';
 
 const App = () => {
   const [selectedColumn, setSelectedColumn] = useState([]);
@@ -13,24 +14,30 @@ const App = () => {
   const [pdfUrl, setPdfUrl] = useState('');
 
   useEffect(() => {
-    axios.get('http://localhost:5000/matches')
+    axios.get('http://localhost:5000/matches',{ 
+      headers:{"Content-Type":"application/json"}
+    }
+    )
       .then(response => {
         console.log('API Response:', response.data); // Log the API response to check its structure
-        setMatchesData(Array.isArray(response.data) ? response.data : []);
-      
-      if (Array.isArray(response.data) && response.data.length > 0) {
-        setCurrentDoc(createDoc(response.data[0]));
-      }
+        console.log('API Response:', typeof response.data);
+        setMatchesData(response.data);
+
+        if (response.data.length > 0) {
+          setCurrentDoc(createDoc(response.data[0]));
+        }
       })
       .catch(error => {
         console.error('Error fetching matches data:', error);
       });
   }, []);
-  
+
   
 
 
   const createDoc = (docData) => {
+    setPdfUrl(docData.url)
+    console.log("doc data", docData.invoice_data)
     return {
       _id: docData._id,
       s3_link:docData.s3_link,
@@ -136,69 +143,6 @@ const getColor = (value) => {
       ) : (
         <p>Loading...</p>
       )}
-        <div>
-          <button onClick={toggleBookingTable} style={{ position: 'absolute', bottom: '0px', right: '0px' }}>
-            Booking Data
-          </button>
-          {showBookingTable && (
-            <div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Booking Data</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Supplier</td>
-                    <td>{currentDoc.booking_data.seller_name || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Supplier GSTIN</td>
-                    <td>{currentDoc.booking_data.seller_vat_number || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Invoice Number</td>
-                    <td>{currentDoc.booking_data.invoice_number || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Invoice Value</td>
-                    <td>{currentDoc.booking_data.invoice_amount || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Invoice Date</td>
-                    <td>{currentDoc.booking_data.invoice_date || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Location</td>
-                    <td>{currentDoc.booking_data.LocName || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Buyer GST</td>
-                    <td>{currentDoc.booking_data.buyer_vat_number || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Buyer address</td>
-                    <td>{currentDoc.booking_data.buyer_address || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Employee first name</td>
-                    <td>{currentDoc.booking_data.EmployeeFirstName || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Employee last name</td>
-                    <td>{currentDoc.booking_data.EmployeeFirstName || 'N/A'}</td>
-                  </tr>
-                  <tr>
-                    <td>Employee ID</td>
-                    <td>{currentDoc.booking_data.EmployeeID || 'N/A'}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
 
         {!showBookingTable && currentDoc && (
           <form>

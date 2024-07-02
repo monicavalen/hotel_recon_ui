@@ -8,6 +8,9 @@ import json
 from datetime import datetime
 import boto3
 from botocore.exceptions import NoCredentialsError
+from flask import Response
+from bson import ObjectId 
+from bson import ObjectId
 
 app = Flask(__name__)
 CORS(app)
@@ -29,17 +32,7 @@ db_name = DATABASE_FUZZY
 matches_collection_name = COLLECTION_FUZZY_OUTPUT
 selected_column_collection_name = SELECTED_COLUMN
 
-twoB_database_name = DATABASE_GST
-twoB_collection_name = COLLECTION_GST_INPUT_2B
 
-def default(obj):
-    if isinstance(obj, ObjectId):
-        return str(obj)
-    elif isinstance(obj, float) and (obj != obj or obj == float('inf') or obj == float('-inf')):
-        return None
-    elif isinstance(obj, datetime):
-        return obj.isoformat()  # Serialize datetime to ISO 8601 format
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 def convert_object_ids(data):
     if isinstance(data, list):
@@ -48,21 +41,10 @@ def convert_object_ids(data):
         return {key: convert_object_ids(value) for key, value in data.items()}
     elif isinstance(data, ObjectId):
         return str(data)
-    elif isinstance(data, float) and (data != data or data == float('inf') or data == float('-inf')):
-        return None  # Convert NaN and Infinity to None
-    elif isinstance(data, (int, str)):
-        return data
-    elif isinstance(data, datetime):
-        return data.isoformat()  # Convert datetime to ISO 8601 format
-    elif data is None:
+    elif isinstance(data, float) and (data != data):  # Check for NaN
         return None
     else:
-        try:
-            json.dumps(data, default=default)  # Try to serialize using json.dumps with custom default function
-            return data
-        except Exception as e:
-            print(f"Failed to serialize: {data}, Error: {e}")
-            return str(data)  # Return as string if serialization fails
+        return data
 
 @app.route('/matches', methods=['GET'])
 def fetch_new_data():
@@ -70,11 +52,18 @@ def fetch_new_data():
         db = client[db_name]
         new_collection = db[matches_collection_name]
         print("MongoDB connection: Successful")
-        new_data = list(new_collection.find())
+        filter_criteria = {
+            "$or":[
+                {"seen":{"$exists":False}},
+                {"seen": None},
+                {"seen":False}
+            ]
+        }
+        new_data = list(new_collection.find(filter_criteria).limit(1))
         print(len(new_data))
-        print(f"Data from second collection:")
+        print("Data from second collection:")
         for i in new_data:
-            print("--------------------------------------------------------------------------------------------------------------------",i['booking_data']['original_filename'])
+            print("--------------------------------------------------------------------------------------------------------------------", i['booking_data']['original_filename'])
             file_name = f"test/{i['booking_data']['original_filename']}"
             print(file_name)
             if not file_name:
@@ -85,35 +74,19 @@ def fetch_new_data():
                     Params={'Bucket': bucket_name, 'Key': file_name},
                     ExpiresIn=3600  # URL expiration time in seconds
                 )
-                print(f"im after creating signedurl:",signed_url)
+                print("im after creating signedurl:", signed_url)
                 i['url'] = signed_url
             except NoCredentialsError:
                 return jsonify({'error': 'Credentials not available'}), 500
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
-        # print(new_data)
-        return json.dumps(new_data, default=default), 200
+        # Convert ObjectIds and handle NaN values before returning
+        cleaned_data = convert_object_ids(new_data)
+        return jsonify(cleaned_data), 200
+
     except ConnectionFailure:
         print("MongoDB connection: Failed")
-        return "error"
-
-
-@app.route('/2bData', methods=['GET'])
-def fetch_2b_data():
-    try:
-        db = client[twoB_database_name]
-        new_collection = db[twoB_collection_name]
-        print("MongoDB connection for two b: Successful")
-        new_data = list(new_collection.find().limit(20))
-        print("Data from 2B collection:")
-        converted_data = convert_object_ids(new_data)
-        return jsonify(converted_data), 200
-    except ConnectionFailure:
-        print("MongoDB connection: Failed")
-        return jsonify({"error": "MongoDB connection failed"}), 500
-    except Exception as e:
-        print("An error occurred:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': 'Database connection failed'}), 500
 
 @app.route('/saveSelectedColumn', methods=['POST'])
 def save_selected_column():
@@ -153,7 +126,7 @@ def save_selected_column():
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({'error': str(e)}), 500
-    
+
 @app.route('/saveRemarks', methods=['POST'])
 def save_remarks():
     try:
@@ -200,7 +173,6 @@ def fetch_selected_data():
         new_collection = db[selected_column_collection_name]
         print("MongoDB connection: Successful")
         new_data = list(new_collection.find())
-        # print("Data from selected collection:")
         converted_data = convert_object_ids(new_data)
         return jsonify(converted_data), 200
     except ConnectionFailure:

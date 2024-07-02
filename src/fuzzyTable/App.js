@@ -9,7 +9,7 @@ const App = () => {
   const gridStyle = useMemo(() => ({ height: "100%", width: "100%" }), []);
 
   const [data, setData] = useState([]);
-  const [data2B, setData2B] = useState([]);
+  // const [data2B, setData2B] = useState([]);
   // const [selectedData, setSelectedData] = useState([]);
 
   const [columnDefs] = useState([
@@ -63,39 +63,19 @@ const App = () => {
     };
     fetchBookingData();
   }, []);
+  console.log(data, 'response')
 
-  useEffect(() => {
-    const fetch2BData = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/2bData');
-        setData2B(response.data);
-      } catch (error) {
-        console.error('Error fetching 2B data:', error);
-      }
-    };
-    fetch2BData();
-  }, []);
-
-  // useEffect(() => {
-  //   const fetchSelectedData = async () => {
-  //     try {
-  //       const response = await axios.get('http://localhost:5000/selected');
-  //       setSelectedData(response.data);
-  //     } catch (error) {
-  //       console.error('Error fetching selected data:', error);
-  //     }
-  //   };
-  //   fetchSelectedData();
-  // }, []);
+ 
 
   const rowData = useMemo(() => {
-    if (data.length === 0 || data2B.length === 0 ) {
+    if (data.length === 0) {
       return [];
     }
 
     const mergedData = data.map(entry => {
       const respective2BData = entry.selected?.respective_2b_data;
       const selectedData = entry.selected || {};
+      
 
       return {
         booking_supplier_name: entry.booking_data?.seller_name,
@@ -126,17 +106,13 @@ const App = () => {
         selected_invoice_number:selectedData?.inum,
         selected_gst:selectedData?.gstin,
         selected_invoice_date:selectedData?.gendt,
-        selected_invoice_amount:selectedData?.val
-
-
-
-        
+        selected_invoice_amount:selectedData?.val    
       };
       
     });
     console.log("rowData:", mergedData); 
     return mergedData;
-  }, [data, data2B]);
+  }, [data]);
   
 
   return (
