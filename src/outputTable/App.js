@@ -140,16 +140,13 @@ const defaultColDef = useMemo(() => {
 
 
   const rowData = useMemo(() => {
-    if (data.length === 0 || data2B.length === 0 ) {
-      // if (data.length === 0) {
+    if (data.length === 0 ) {
       return [];
     }
 
     const mergedData = data.map(entry => {
-      const corresponding2B = data2B.find(
-        item => item?.inum === entry?.invoice_data?.invoice_number
-      );
-      const selectedScores = entry.selected?.[0] || {};
+      const respective2BData = entry.selected?.respective_2b_data;
+      const selectedData = entry.selected || {};
 
       return {
         _id:entry._id,
@@ -161,31 +158,33 @@ const defaultColDef = useMemo(() => {
         booking_customer_gst: entry.booking_data?.buyer_vat_number,
         booking_invoice_amount: entry.booking_data?.invoice_amount,
 
-        // invoice_seller_name: entry.invoice_data?.seller_name,
+        invoice_seller_name: entry.invoice_data?.seller_name,
         invoice_invoice_number: entry.invoice_data?.invoice_number,
         invoice_invoice_date: entry.invoice_data?.invoice_date,
         invoice_buyer_name: entry.invoice_data?.buyer_name,
         invoice_invoice_amount: entry.invoice_data?.invoice_amount,
 
-        twoB_seller_name: corresponding2B?.trdnm,
-        twoB_invoice_number: corresponding2B?.inum,
-        twoB_invoice_date: corresponding2B?.dt,
-        twoB_seller_vat_number: corresponding2B?.gstin,
-        twoB_buyer_vat_number: corresponding2B?.cstin,
-        twoB_invoice_amount: corresponding2B?.val,
+        twoB_seller_name: respective2BData?.trdnm,
+        twoB_invoice_number: respective2BData?.inum,
+        twoB_invoice_date: respective2BData?.dt,
+        twoB_seller_vat_number: respective2BData?.gstin,
+        twoB_buyer_vat_number: respective2BData?.cstin,
+        twoB_invoice_amount: respective2BData?.val,
 
-        selected_invoice_number_score: selectedScores?.inv_no_score,
-        selected_invoice_date_score: selectedScores?.date_score,
-        selected_invoice_amount_score: selectedScores?.amount_score,
-        selected_gst_score: selectedScores?.gstin_score,
+        selected_invoice_number_score: selectedData?.invoice_Number_Score,
+        selected_invoice_date_score: selectedData?.invoiceDate_Score,
+        selected_invoice_amount_score: selectedData?.invoiceAmount_Score,
+        selected_gst_score: selectedData?.invoiceGstin_Score,
+
+
       };
       
     });
     
 
     return mergedData;
-  }, [data, data2B]);
-// }, [data]);
+  }, [data]);
+
   const onCellValueChanged = async (params) => {
     if (params.colDef.field === 'remarks') {
       const updatedRow = params.data;

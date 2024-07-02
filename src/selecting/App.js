@@ -16,16 +16,18 @@ const App = () => {
     axios.get('http://localhost:5000/matches')
       .then(response => {
         console.log('API Response:', response.data); // Log the API response to check its structure
-        setMatchesData(response.data);
-
-        if (response.data.length > 0) {
-          setCurrentDoc(createDoc(response.data[0]));
-        }
+        setMatchesData(Array.isArray(response.data) ? response.data : []);
+      
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setCurrentDoc(createDoc(response.data[0]));
+      }
       })
       .catch(error => {
         console.error('Error fetching matches data:', error);
       });
   }, []);
+  
+  
 
 
   const createDoc = (docData) => {
@@ -33,9 +35,10 @@ const App = () => {
       _id: docData._id,
       s3_link:docData.s3_link,
       
+      
       df_A: {
         // seller_name: docData.invoice_data.shipto_name,
-        seller_vat_number: docData.invoice_data.supplier_gst_number,
+        seller_vat_number: docData.invoice_data.hotel_gstin,
         invoice_number: docData.invoice_data.invoice_number,
         invoice_amount: docData.invoice_data.invoice_amount,
         invoice_date: docData.invoice_data.invoice_date,
@@ -46,6 +49,7 @@ const App = () => {
         inum: match.respective_2b_data.inum,
         val: match.respective_2b_data.val,
         dt: match.respective_2b_data.dt,
+
         gstin_score: match.invoiceGstin_Score,
         inv_no_score: match.invoice_Number_Score,
         amount_score: match.invoiceAmount_Score,
@@ -59,7 +63,6 @@ const App = () => {
   };
   
 
-  
 
 const getColor = (value) => {
     if (value > 80) {
@@ -80,15 +83,6 @@ const getColor = (value) => {
     return date.toISOString().split("T")[0];
   };
 
-  const downloadFile = (url) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', '');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleNextClick = () => {
     const nextIndex = (currentIndex + 1) % matchesData.length;
     setCurrentIndex(nextIndex);
@@ -106,32 +100,12 @@ const getColor = (value) => {
     handleNextClick();
   };
 
-  // const handleConfirmClick = () => {
-  //   // Capture the selected column data
-  //   const selectedData = selectedColumn.map(index => currentDoc.df_B[index]);
-    
-  //   // Document ID to be sent
-  //   const documentId = currentDoc._id; // Make sure currentDoc contains _id
-    
-  //   // Send data to backend to save to MongoDB
-  //   axios.post(`http://localhost:5000/saveSelectedColumn?documentId=${documentId}`, selectedData)
-  //     .then(response => {
-  //       console.log('Data saved:', response.data);
-  //       handleNextClick(); // Move to the next item
-  //     })
-  //     .catch(error => {
-  //       console.error('Error saving selected column data:', error);
-  //     });
-  // };
   const handleConfirmClick = () => {
-    // Capture the selected column data
-    const selectedData = selectedColumn.map(index => currentDoc.df_B[index]);
+    // Capture the entire object from matches array
+    const selectedData = matchesData[currentIndex].Matches[selectedColumn];
 
     // Document ID to be sent
-    const documentId = currentDoc._id; // Make sure currentDoc contains _id
-
-    // Log currentDoc to ensure it contains _id
-    console.log('Current Document:', currentDoc);
+    const documentId = currentDoc._id;
 
     if (!documentId) {
       console.error('Document ID is not defined');
@@ -152,29 +126,16 @@ const getColor = (value) => {
   const toggleBookingTable = () => {
     setShowBookingTable(!showBookingTable);
   };
-  const renderFile = (url) => {
-    const fileExtension = url.split('.').pop().toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
-      return <img src={url} alt="Document" style={{ maxWidth: '100%', height: 'auto' }} />;
-    } else if (fileExtension === 'pdf') {
-      return (
-        <iframe src={url} width="100%" height="600px" title="Document">
-          <p>Your browser does not support PDFs. <a href={url}>Download the PDF</a>.</p>
-        </iframe>
-      );
-    } else {
-      return <p>Unsupported file type.</p>;
-    }
-  };
+  
 
   return (
     <div>
       <div className='container'>
-      {currentDoc && currentDoc.s3_link && (
-          <div style={{ marginBottom: '20px' }}>
-            {renderFile(currentDoc.s3_link)}
-          </div>
-        )}
+       {pdfUrl ? (
+        <iframe src={pdfUrl} width="600" height="800" title="S3 PDF" />
+      ) : (
+        <p>Loading...</p>
+      )}
         <div>
           <button onClick={toggleBookingTable} style={{ position: 'absolute', bottom: '0px', right: '0px' }}>
             Booking Data

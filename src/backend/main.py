@@ -3,18 +3,31 @@ from pymongo.errors import ConnectionFailure
 from bson import ObjectId
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from config import MONGODB_CONNECTION_STRING, DATABASE_FUZZY, COLLECTION_FUZZY_OUTPUT, COLLECTION_GST_INPUT_2B, DATABASE_GST
+from config import MONGODB_CONNECTION_STRING, DATABASE_FUZZY, COLLECTION_FUZZY_OUTPUT, COLLECTION_GST_INPUT_2B, DATABASE_GST,AWS_ACCESS_KEY, AWS_SECRET_KEY, REGION_NAME, BUCKET_NAME, SELECTED_COLUMN
 import json
 from datetime import datetime
+import boto3
+from botocore.exceptions import NoCredentialsError
 
 app = Flask(__name__)
 CORS(app)
+
+aws_access_key_id = AWS_ACCESS_KEY
+aws_secret_access_key = AWS_SECRET_KEY
+region_name = REGION_NAME
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    region_name=region_name
+)
+bucket_name = BUCKET_NAME
 
 connection_string = MONGODB_CONNECTION_STRING
 client = MongoClient(connection_string)
 db_name = DATABASE_FUZZY
 matches_collection_name = COLLECTION_FUZZY_OUTPUT
-selected_column_collection_name = "selectedColumn"
+selected_column_collection_name = SELECTED_COLUMN
 
 twoB_database_name = DATABASE_GST
 twoB_collection_name = COLLECTION_GST_INPUT_2B
@@ -58,15 +71,32 @@ def fetch_new_data():
         new_collection = db[matches_collection_name]
         print("MongoDB connection: Successful")
         new_data = list(new_collection.find())
-        print("Data from matches collection:")
-        converted_data = convert_object_ids(new_data)
-        return jsonify(converted_data), 200
+        print(len(new_data))
+        print(f"Data from second collection:")
+        for i in new_data:
+            print("--------------------------------------------------------------------------------------------------------------------",i['booking_data']['original_filename'])
+            file_name = f"test/{i['booking_data']['original_filename']}"
+            print(file_name)
+            if not file_name:
+                return jsonify({'error': 'File name is required'}), 400
+            try:
+                signed_url = s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': bucket_name, 'Key': file_name},
+                    ExpiresIn=3600  # URL expiration time in seconds
+                )
+                print(f"im after creating signedurl:",signed_url)
+                i['url'] = signed_url
+            except NoCredentialsError:
+                return jsonify({'error': 'Credentials not available'}), 500
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+        # print(new_data)
+        return json.dumps(new_data, default=default), 200
     except ConnectionFailure:
         print("MongoDB connection: Failed")
-        return jsonify({"error": "MongoDB connection failed"}), 500
-    except Exception as e:
-        print("An error occurred:", e)
-        return jsonify({"error": str(e)}), 500
+        return "error"
+
 
 @app.route('/2bData', methods=['GET'])
 def fetch_2b_data():
@@ -123,7 +153,7 @@ def save_selected_column():
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({'error': str(e)}), 500
-
+    
 @app.route('/saveRemarks', methods=['POST'])
 def save_remarks():
     try:
