@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../selecting/Sap.css';
 import { Popconfirm } from 'antd';
 import axios from 'axios';
@@ -11,11 +10,16 @@ const App = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showBookingTable, setShowBookingTable] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
+    fetchMatchesData();
+  }, []);
+
+  const fetchMatchesData = () => {
     axios.get('http://localhost:5000/matches')
       .then(response => {
-        console.log('API Response:', response.data); // Log the API response to check its structure
+        console.log('API Response:', response.data);
         setMatchesData(response.data);
 
         if (response.data.length > 0) {
@@ -25,17 +29,15 @@ const App = () => {
       .catch(error => {
         console.error('Error fetching matches data:', error);
       });
-  }, []);
-
+  };
 
   const createDoc = (docData) => {
+    setPdfUrl(docData.url);
     return {
       _id: docData._id,
-      s3_link:docData.s3_link,
-      
+      s3_link: docData.s3_link,
       df_A: {
-        // seller_name: docData.invoice_data.shipto_name,
-        seller_vat_number: docData.invoice_data.supplier_gst_number,
+        seller_vat_number: docData.invoice_data.hotel_gstin,
         invoice_number: docData.invoice_data.invoice_number,
         invoice_amount: docData.invoice_data.invoice_amount,
         invoice_date: docData.invoice_data.invoice_date,
@@ -53,40 +55,7 @@ const App = () => {
         combined_score: match.combined_score,
       })),
       booking_data: docData.booking_data
-      
     };
-    
-  };
-  
-
-  
-
-const getColor = (value) => {
-    if (value > 80) {
-        return "#388E3C";
-    } else if (value >= 50 && value <= 80) {
-        return "#C0CA33";
-    } else {
-        return "#E53935";
-    }
-};
-
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return "N/A";
-    const [day, month, year] = timestamp.split("-");
-    const isoDateString = `${year}-${month}-${day}`;
-    const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) return "N/A";
-    return date.toISOString().split("T")[0];
-  };
-
-  const downloadFile = (url) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', '');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleNextClick = () => {
@@ -102,78 +71,110 @@ const getColor = (value) => {
   };
 
   const handleSkipClick = () => {
-    // Implement the behavior for skipping an item (e.g., moving to the next item)
-    handleNextClick();
+    handleNextClick(); // Skip to the next document
   };
 
-  // const handleConfirmClick = () => {
-  //   // Capture the selected column data
-  //   const selectedData = selectedColumn.map(index => currentDoc.df_B[index]);
-    
-  //   // Document ID to be sent
-  //   const documentId = currentDoc._id; // Make sure currentDoc contains _id
-    
-  //   // Send data to backend to save to MongoDB
-  //   axios.post(`http://localhost:5000/saveSelectedColumn?documentId=${documentId}`, selectedData)
-  //     .then(response => {
-  //       console.log('Data saved:', response.data);
-  //       handleNextClick(); // Move to the next item
-  //     })
-  //     .catch(error => {
-  //       console.error('Error saving selected column data:', error);
-  //     });
-  // };
-  const handleConfirmClick = () => {
-    // Capture the selected column data
-    const selectedData = selectedColumn.map(index => currentDoc.df_B[index]);
-
-    // Document ID to be sent
-    const documentId = currentDoc._id; // Make sure currentDoc contains _id
-
-    // Log currentDoc to ensure it contains _id
-    console.log('Current Document:', currentDoc);
+  const handleConfirmClick = async (confirmed) => {
+    const selectedData = matchesData[currentIndex].Matches[selectedColumn];
+    const documentId = currentDoc._id;
 
     if (!documentId) {
       console.error('Document ID is not defined');
       return;
     }
 
-    // Send data to backend to save to MongoDB
-    axios.post(`http://localhost:5000/saveSelectedColumn?documentId=${documentId}`, selectedData)
-      .then(response => {
-        console.log('Data saved:', response.data);
-        handleNextClick(); // Move to the next item
-      })
-      .catch(error => {
-        console.error('Error saving selected column data:', error);
+    try {
+      // API call to save selected column data
+      await axios.post(`http://localhost:5000/saveSelectedColumn?documentId=${documentId}`, selectedData);
+      console.log('Data saved successfully');
+      
+      // Update 'seen' value based on confirmed status
+      await saveSeenValue(confirmed);
+  
+      // Fetch the next document before updating the state
+      const nextDocData = await fetchNextDocument();
+
+      if (nextDocData) {
+        setHistory(prevHistory => [...prevHistory, currentDoc]);
+        setCurrentDoc(createDoc(nextDocData));
+      } else {
+        console.log("No more documents to fetch.");
+      }
+    } catch (error) {
+      console.error('Error during confirmation handling:', error);
+    }
+  };
+
+  const saveSeenValue = async (confirmed) => {
+    const documentId = currentDoc._id;
+
+    if (!documentId) {
+      console.error('Document ID is not defined');
+      return;
+    }
+
+    try {
+      // API call to save 'seen' value
+      await axios.post(`http://localhost:5000/saveSeenValue?documentId=${documentId}`, { seen: confirmed });
+      console.log('Seen value updated');
+    } catch (error) {
+      console.error('Error saving seen value:', error);
+    }
+  };
+
+  const fetchNextDocument = async () => {
+    if (!currentDoc) return null; // Guard clause if `currentDoc` is not set
+
+    try {
+      // API call to fetch the next document
+      const response = await axios.get('http://localhost:5000/nextDocument', {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+
+      const nextDocData = response.data;
+      return nextDocData ? nextDocData : null;
+    } catch (error) {
+      console.error('Error fetching the next document:', error);
+      return null;
+    }
   };
 
   const toggleBookingTable = () => {
     setShowBookingTable(!showBookingTable);
   };
-  const renderFile = (url) => {
-    const fileExtension = url.split('.').pop().toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
-      return <img src={url} alt="Document" style={{ maxWidth: '100%', height: 'auto' }} />;
-    } else if (fileExtension === 'pdf') {
-      return (
-        <iframe src={url} width="100%" height="600px" title="Document">
-          <p>Your browser does not support PDFs. <a href={url}>Download the PDF</a>.</p>
-        </iframe>
-      );
+
+  const getColor = (value) => {
+    if (value > 80) {
+      return "#388E3C";
+    } else if (value >= 50 && value <= 80) {
+      return "#C0CA33";
     } else {
-      return <p>Unsupported file type.</p>;
+      return "#E53935";
     }
   };
+  
+
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "N/A";
+    const [day, month, year] = timestamp.split("-");
+    const isoDateString = `${year}-${month}-${day}`;
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toISOString().split("T")[0];
+  };
+
 
   return (
     <div>
       <div className='container'>
-      {currentDoc && currentDoc.s3_link && (
-          <div style={{ marginBottom: '20px' }}>
-            {renderFile(currentDoc.s3_link)}
-          </div>
+        {/* <embed src={imageSrc} type="application/pdf" width="600px" height="1000px" />
+         */}
+        {pdfUrl ? (
+          <iframe src={pdfUrl} width="600" height="800" title="S3 PDF" />
+        ) : (
+          <p>Loading...</p>
         )}
         <div>
           <button onClick={toggleBookingTable} style={{ position: 'absolute', bottom: '0px', right: '0px' }}>
@@ -358,11 +359,11 @@ const getColor = (value) => {
             <button type="button" onClick={handlePreviousClick}>Previous</button>
             <button type="button" onClick={handleSkipClick}>SKIP</button>
             <Popconfirm
-              title="Confident?"
-              description="Are you sure about this match"
+              title="Are you sure about this match?"
               okText="Yes"
               cancelText="No"
-              onConfirm={handleConfirmClick}
+              onConfirm={() => handleConfirmClick(true)}
+              onCancel={() => handleConfirmClick(false)}
             >
               <button type="button">Next</button>
             </Popconfirm>

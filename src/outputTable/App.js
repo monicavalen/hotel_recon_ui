@@ -13,6 +13,7 @@ import { MenuModule } from "@ag-grid-enterprise/menu";
 import { RowGroupingModule } from "@ag-grid-enterprise/row-grouping";
 import { SetFilterModule } from "@ag-grid-enterprise/set-filter";
 
+
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   ColumnsToolPanelModule,
@@ -108,7 +109,7 @@ const defaultColDef = useMemo(() => {
   useEffect(() => {
     const fetchBookingData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/matches');
+        const response = await axios.get('http://localhost:5000/matchesOutputTable');
         
         setData(response.data);
       } catch (error) {
@@ -120,32 +121,14 @@ const defaultColDef = useMemo(() => {
   console.log(data, 'booking data')
 
 
-  useEffect(() => {
-    const fetch2BData = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/2bData');
-        
-        setData2B(response.data);
-      } catch (error) {
-        console.error('Error fetching 2B data:', error);
-      }
-    };
-    fetch2BData();
-    
-  }, []);
-  console.log(data2B, '2b data')
-
-
   const rowData = useMemo(() => {
-    if (data.length === 0 || data2B.length === 0 ) {
+    if (data.length === 0 ) {
       return [];
     }
 
     const mergedData = data.map(entry => {
-      const corresponding2B = data2B.find(
-        item => item?.inum === entry?.invoice_data?.invoice_number
-      );
-      const selectedScores = entry.selected?.[0] || {};
+      const respective2BData = entry.selected?.respective_2b_data;
+      const selectedData = entry.selected || {};
 
       return {
         _id:entry._id,
@@ -163,24 +146,38 @@ const defaultColDef = useMemo(() => {
         invoice_buyer_name: entry.invoice_data?.buyer_name,
         invoice_invoice_amount: entry.invoice_data?.invoice_amount,
 
-        twoB_seller_name: corresponding2B?.trdnm,
-        twoB_invoice_number: corresponding2B?.inum,
-        twoB_invoice_date: corresponding2B?.dt,
-        twoB_seller_vat_number: corresponding2B?.gstin,
-        twoB_buyer_vat_number: corresponding2B?.cstin,
-        twoB_invoice_amount: corresponding2B?.val,
+        // twoB_seller_name: entry.selected?.respective_2b_data.trdnm,
+        // twoB_invoice_number: entry.selected?.respective_2b_data.inum,
+        // twoB_invoice_date: entry.selected?.respective_2b_data.dt,
+        // twoB_seller_vat_number: entry.selected?.respective_2b_data.gstin,
+        // twoB_buyer_vat_number: entry.selected?.respective_2b_data.cstin,
+        // twoB_invoice_amount: entry.selected?.respective_2b_data.val,
 
-        selected_invoice_number_score: selectedScores?.inv_no_score,
-        selected_invoice_date_score: selectedScores?.date_score,
-        selected_invoice_amount_score: selectedScores?.amount_score,
-        selected_gst_score: selectedScores?.gstin_score,
+        twoB_seller_name: respective2BData?.trdnm,
+        twoB_invoice_number: respective2BData?.inum,
+        twoB_invoice_date: respective2BData?.dt,
+        twoB_seller_vat_number: respective2BData?.gstin,
+        twoB_buyer_vat_number: respective2BData?.cstin,
+        twoB_invoice_amount: respective2BData?.val,
+
+        // selected_invoice_number_score: entry.selected.invoice_Number_Score,
+        // selected_invoice_date_score: entry.selected.invoiceDate_Score,
+        // selected_invoice_amount_score: entry.selected.invoiceAmount_Score,
+        // selected_gst_score: entry.selected.invoiceGstin_Score,
+
+        selected_invoice_number_score: selectedData?.invoice_Number_Score,
+        selected_invoice_date_score: selectedData?.invoiceDate_Score,
+        selected_invoice_amount_score: selectedData?.invoiceAmount_Score,
+        selected_gst_score: selectedData?.invoiceGstin_Score,
+
+
       };
       
     });
     
 
     return mergedData;
-  }, [data, data2B]);
+  }, [data]);
   const onCellValueChanged = async (params) => {
     if (params.colDef.field === 'remarks') {
       const updatedRow = params.data;
@@ -199,6 +196,7 @@ const defaultColDef = useMemo(() => {
 
   return (
     <div style={containerStyle}>
+      
       <div style={gridStyle} className="ag-theme-quartz">
         <AgGridReact
           ref={gridRef}

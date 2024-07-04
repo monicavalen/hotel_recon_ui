@@ -50,7 +50,7 @@ const App = () => {
   useEffect(() => {
     const fetchBookingData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/matches');
+        const response = await axios.get('http://localhost:5000/matchesOutputTable');
         setData(response.data);
       } catch (error) {
         console.error('Error fetching booking data:', error);
@@ -59,17 +59,7 @@ const App = () => {
     fetchBookingData();
   }, []);
 
-  useEffect(() => {
-    const fetch2BData = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/2bData');
-        setData2B(response.data);
-      } catch (error) {
-        console.error('Error fetching 2B data:', error);
-      }
-    };
-    fetch2BData();
-  }, []);
+  
 
   // useEffect(() => {
   //   const fetchSelectedData = async () => {
